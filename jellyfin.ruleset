@@ -33,6 +33,7 @@
         <Rule Id="SA1600" Action="None" />
         <!-- disable warning SA1602: Enumeration items should be documented -->
         <Rule Id="SA1602" Action="None" />
+        <Rule Id="SA1623" Action="None" />
         <!-- disable warning SA1633: The file header is missing or not located at the top of the file -->
         <Rule Id="SA1633" Action="None" />
     </Rules>
