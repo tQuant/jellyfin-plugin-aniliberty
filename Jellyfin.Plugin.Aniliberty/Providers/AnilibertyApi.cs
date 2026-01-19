@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.Aniliberty.Configuration;
 using Jellyfin.Plugin.Aniliberty.Models;
-using MediaBrowser.Model.Tasks;
 
 namespace Jellyfin.Plugin.Aniliberty.Providers;
 
@@ -28,9 +25,9 @@ public class AnilibertyApi
         return await WebRequest<CatalogRelease>("/anime/releases/" + id, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<CatalogRelease>> SearchReleases(string name, int? year, CancellationToken cancellationToken)
+    public async Task<List<CatalogRelease>> SearchReleases(string name, int? year, PluginConfiguration config, CancellationToken cancellationToken)
     {
-        var response = await WebRequest<CatalogList>("/anime/catalog/releases?limit=2&f[search]=" + name + "&f[years][from_year]=" + (year != null ? year : string.Empty), cancellationToken).ConfigureAwait(false);
+        var response = await WebRequest<CatalogList>("/anime/catalog/releases?limit=" + (config.AntiBlock ? 2 : 10) + "&f[search]=" + name + "&f[years][from_year]=" + (year != null ? year : string.Empty), cancellationToken).ConfigureAwait(false);
         if (response == null)
         {
             return new List<CatalogRelease>();

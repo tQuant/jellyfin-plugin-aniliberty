@@ -18,7 +18,7 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
     private readonly AnilibertyApi _api = new();
 
     /// <inheritdoc />
-    public int Order => -2;
+    public int Order => 0;
 
     /// <inheritdoc />
     public string Name => "Aniliberty";
@@ -26,6 +26,12 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
     /// <inheritdoc />
     public async Task<MetadataResult<Series>> GetMetadata(SeriesInfo info, CancellationToken cancellationToken)
     {
+        if (Plugin.Instance == null)
+        {
+            throw new InvalidOperationException("AnilibertyPlugin instance is not set");
+        }
+
+        var config = Plugin.Instance.Configuration;
         var result = new MetadataResult<Series>();
         var id = info.ProviderIds.GetValueOrDefault(SeriesExternalId.ProviderKey);
         CatalogRelease? release = null;
@@ -37,19 +43,25 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
         else
         {
             logger.LogInformation("Aniliberty... Searching by name({Id}, {Year})", info.Name, info.Year);
-            var releases = await _api.SearchReleases(info.Name, info.Year, cancellationToken).ConfigureAwait(false);
+            var releases = await _api.SearchReleases(info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
             if (releases.Count > 0)
             {
+                logger.LogInformation("Aniliberty... Found {X} releases", releases.Count);
                 release = releases[0];
             }
         }
 
         if (release is not null)
         {
+            logger.LogInformation("Aniliberty... Found release: {Name}", release.Name);
             result.HasMetadata = true;
             result.QueriedById = id != null;
             result.Item = release.ToSeries();
             result.Provider = SeriesExternalId.ProviderKey;
+        }
+        else
+        {
+            logger.LogInformation("Aniliberty... No results");
         }
 
         return result;
@@ -73,17 +85,17 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
             CatalogRelease? release = await _api.GetRelease(aid, cancellationToken).ConfigureAwait(false);
             if (release is not null)
             {
-                results.Add(release.ToSearchResult(config.ApiHost));
+                results.Add(release.ToSearchResult(config));
             }
         }
 
         if (!string.IsNullOrEmpty(searchInfo.Name))
         {
             logger.LogInformation("Aniliberty... Searching by name({Id}, {Year})", searchInfo.Name, searchInfo.Year);
-            var releases = await _api.SearchReleases(searchInfo.Name, searchInfo.Year, cancellationToken).ConfigureAwait(false);
+            var releases = await _api.SearchReleases(searchInfo.Name, searchInfo.Year, config, cancellationToken).ConfigureAwait(false);
             foreach (var release in releases)
             {
-                results.Add(release.ToSearchResult(config.ApiHost));
+                results.Add(release.ToSearchResult(config));
             }
         }
 

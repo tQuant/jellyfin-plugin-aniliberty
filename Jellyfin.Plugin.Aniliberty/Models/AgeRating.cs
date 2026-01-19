@@ -7,7 +7,7 @@ namespace Jellyfin.Plugin.Aniliberty.Models;
 public class AgeRating
 {
     [JsonPropertyName("value")]
-    public required AgeRating Value { get; set; }
+    public required string Value { get; set; }
 
     [JsonPropertyName("label")]
     public required string Label { get; set; }

@@ -1,15 +1,14 @@
+using System.Text.Json.Serialization;
+
 namespace Jellyfin.Plugin.Aniliberty.Models;
 
 #pragma warning disable CS1591
 
-public enum PublishDay
+public class PublishDay
 {
-    None,
-    Monday = 1,
-    Tuesday = 2,
-    Wednesday = 3,
-    Thursday = 4,
-    Friday = 5,
-    Saturday = 6,
-    Sunday = 7,
+    [JsonPropertyName("value")]
+    public int? Value { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 }

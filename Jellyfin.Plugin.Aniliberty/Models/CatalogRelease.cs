@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Jellyfin.Plugin.Aniliberty.Configuration;
 using Jellyfin.Plugin.Aniliberty.Providers;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
@@ -15,7 +16,7 @@ namespace Jellyfin.Plugin.Aniliberty.Models;
 
 public class CatalogRelease
 {
-    [JsonPropertyName("data")]
+    [JsonPropertyName("id")]
     public int Id { get; set; }
 
     [JsonPropertyName("type")]
@@ -44,7 +45,7 @@ public class CatalogRelease
     public AgeRating? AgeRating { get; set; }
 
     [JsonPropertyName("publish_day")]
-    public PublishDay PublishDay { get; set; }
+    public PublishDay? PublishDay { get; set; }
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }
@@ -95,17 +96,19 @@ public class CatalogRelease
     /// <summary>
     /// Преобразует релиз в RemoteSearchResult.
     /// </summary>
-    /// <param name="host">Aniliberty API host.</param>
+    /// <param name="config">Plugin config.</param>
     /// <returns>RemoteSearchResult.</returns>
-    public RemoteSearchResult ToSearchResult(string host)
+    public RemoteSearchResult ToSearchResult(PluginConfiguration config)
     {
-        string? image = Poster?.optimized?.thumbnail ?? Poster?.thumbnail ?? null;
+        string? image = config.AntiBlock
+            ? (Poster?.optimized?.thumbnail ?? Poster?.thumbnail ?? null)
+            : Poster?.src;
         return new RemoteSearchResult
         {
             Name = Name?.Main,
             Overview = Description,
             ProductionYear = Year,
-            ImageUrl = image != null ? host + image : null,
+            ImageUrl = image != null ? config.ApiHost + image : null,
             SearchProviderName = SeriesExternalId.ProviderKey,
             ProviderIds = new Dictionary<string, string>() { { SeriesExternalId.ProviderKey, Id.ToString(CultureInfo.InvariantCulture) } }
         };
