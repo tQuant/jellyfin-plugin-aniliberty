@@ -94,6 +94,27 @@ public class CatalogRelease
     }
 
     /// <summary>
+    /// Преобразует релиз в Season.
+    /// </summary>
+    /// <param name="indexNumber">Номер сезона.</param>
+    /// <returns>Series.</returns>
+    public Season ToSeason(int indexNumber)
+    {
+        return new Season
+        {
+            IndexNumber = indexNumber,
+            Name = Name?.Main,
+            OriginalTitle = Name?.English,
+            Overview = Description,
+            ProductionYear = Year,
+            OfficialRating = AgeRating?.Label,
+            Genres = Genres?.Select(genre => genre.Name).ToArray(),
+            RunTimeTicks = AverageDurationOfEpisode.HasValue ? TimeSpan.FromMinutes((double)AverageDurationOfEpisode).Ticks : null,
+            ProviderIds = new Dictionary<string, string>() { { SeasonExternalId.ProviderKey, Id.ToString(CultureInfo.InvariantCulture) } }
+        };
+    }
+
+    /// <summary>
     /// Преобразует релиз в RemoteSearchResult.
     /// </summary>
     /// <param name="config">Plugin config.</param>

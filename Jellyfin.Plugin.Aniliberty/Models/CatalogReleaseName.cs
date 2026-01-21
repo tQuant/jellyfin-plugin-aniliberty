@@ -6,9 +6,15 @@ namespace Jellyfin.Plugin.Aniliberty.Models;
 
 public class CatalogReleaseName
 {
+    /// <summary>
+    /// Название релиза на русском языке.
+    /// </summary>
     [JsonPropertyName("main")]
     public string? Main { get; set; }
 
+    /// <summary>
+    /// Оригинальное название релиза.
+    /// </summary>
     [JsonPropertyName("english")]
     public string? English { get; set; }
 

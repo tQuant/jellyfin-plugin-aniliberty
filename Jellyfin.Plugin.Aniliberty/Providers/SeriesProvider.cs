@@ -16,6 +16,7 @@ namespace Jellyfin.Plugin.Aniliberty.Providers;
 public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataProvider<Series, SeriesInfo>, IHasOrder
 {
     private readonly AnilibertyApi _api = new();
+    private readonly Resolver _resolver = new();
 
     /// <inheritdoc />
     public int Order => 0;
@@ -34,26 +35,28 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
         var config = Plugin.Instance.Configuration;
         var result = new MetadataResult<Series>();
         var id = info.ProviderIds.GetValueOrDefault(SeriesExternalId.ProviderKey);
+        var logKey = new Random().Next();
+
         CatalogRelease? release = null;
         if (!string.IsNullOrEmpty(id))
         {
-            logger.LogInformation("Aniliberty... Searching by id({Id})", id);
+            logger.LogInformation("Aniliberty...[{Key}]... Searching by id({Id})", logKey, id);
             release = await _api.GetRelease(id, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            logger.LogInformation("Aniliberty... Searching by name({Id}, {Year})", info.Name, info.Year);
+            logger.LogInformation("Aniliberty...[{Key}]... Searching by name({Id}, {Year})", logKey, !string.IsNullOrEmpty(info.OriginalTitle) ? info.OriginalTitle : info.Name, info.Year);
             var releases = await _api.SearchReleases(info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
             if (releases.Count > 0)
             {
-                logger.LogInformation("Aniliberty... Found {X} releases", releases.Count);
-                release = releases[0];
+                logger.LogInformation("Aniliberty...[{Key}]... Found {X} releases", logKey, releases.Count);
+                release = _resolver.FilterSeries(releases, info.OriginalTitle, info.Name);
             }
         }
 
         if (release is not null)
         {
-            logger.LogInformation("Aniliberty... Found release: {Name}", release.Name);
+            logger.LogInformation("Aniliberty...[{Key}]... Found release: {Name} / {Name2}", logKey, release.Name?.Main, release.Name?.English);
             result.HasMetadata = true;
             result.QueriedById = id != null;
             result.Item = release.ToSeries();
@@ -61,7 +64,7 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
         }
         else
         {
-            logger.LogInformation("Aniliberty... No results");
+            logger.LogInformation("Aniliberty...[{Key}]... No matches", logKey);
         }
 
         return result;

@@ -21,6 +21,7 @@ namespace Jellyfin.Plugin.Aniliberty.Providers;
 public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory httpClientFactory) : IRemoteMetadataProvider<Season, SeasonInfo>, IHasOrder
 {
     private readonly AnilibertyApi _api = new();
+    private readonly Resolver _resolver = new();
 
     /// <inheritdoc />
     public string Name => "Aniliberty";
@@ -36,37 +37,78 @@ public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory h
             throw new InvalidOperationException("AnilibertyPlugin instance is not set");
         }
 
+        var result = new MetadataResult<Season>();
+
+        if (info.IndexNumber == null)
+        {
+            return result;
+        }
+
         var config = Plugin.Instance.Configuration;
         var id = info.ProviderIds.GetValueOrDefault(SeasonExternalId.ProviderKey);
+        var parentId = info.SeriesProviderIds.GetValueOrDefault(SeriesExternalId.ProviderKey);
+        var logKey = new Random().Next();
+
+        if (string.IsNullOrEmpty(id) && string.IsNullOrEmpty(parentId))
+        {
+            return result;
+        }
+
         CatalogRelease? release = null;
         if (!string.IsNullOrEmpty(id))
         {
-            logger.LogInformation("Aniliberty... Searching season by id({Id})", id);
+            logger.LogInformation("Aniliberty...[{Key}]... Searching season by id({Id})", logKey, id);
             release = await _api.GetRelease(id, cancellationToken).ConfigureAwait(false);
         }
-        else
+        else if (!string.IsNullOrEmpty(parentId))
         {
-            logger.LogInformation("Aniliberty... Searching season by name({Id}, {Year})", info.Name, info.Year);
-            var releases = await _api.SearchReleases(info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
-            if (releases.Count > 0)
+            logger.LogInformation("Aniliberty...[{Key}]... Search season parent release({Id})", logKey, parentId);
+            var parent = await _api.GetRelease(parentId, cancellationToken).ConfigureAwait(false);
+            if (parent is null)
             {
-                logger.LogInformation("Aniliberty... Found {X} releases", releases.Count);
-                release = releases[0];
+                logger.LogInformation("Aniliberty...[{Key}]... Not found", logKey);
+                return result;
+            }
+
+            if (string.IsNullOrEmpty(parent.Name?.English))
+            {
+                logger.LogInformation("Aniliberty...[{Key}]... parent release has empty orig name", logKey);
+                return result;
+            }
+
+            // Первый сезон совпадает с родительским релизом
+            if (info.IndexNumber == 1)
+            {
+                release = parent;
+            }
+            else
+            {
+                logger.LogInformation("Aniliberty...[{Key}]... Searching season by name and saeson index({Name}, {Index})", logKey, parent.Name?.English, info.IndexNumber);
+                var releases = await _api.SearchReleases(parent.Name?.English + " " + info.IndexNumber, info.Year, config, cancellationToken).ConfigureAwait(false);
+                if (releases.Count == 0)
+                {
+                    logger.LogInformation("Aniliberty...[{Key}]... Not found", logKey);
+                    return result;
+                }
+
+                logger.LogInformation("Aniliberty...[{Key}]... Found {X} releases", logKey, releases.Count);
+#pragma warning disable CS8604 // Possible null reference argument.
+                release = _resolver.FilterSeason(releases, parent.Name?.English, (int)info.IndexNumber, logger);
+#pragma warning restore CS8604 // Possible null reference argument.
             }
         }
 
-        var result = new MetadataResult<Season>();
         if (release is not null)
         {
-            logger.LogInformation("Aniliberty... Found release {Name}, but ignore for now", release.Name);
-            // result.HasMetadata = true;
-            // result.QueriedById = id != null;
-            // result.Item = new Season { IndexNumber = seasonNumber, Overview = seasonResult.Overview, PremiereDate = seasonResult.AirDate, ProductionYear = seasonResult.AirDate?.Year };
-            // result.Provider = SeasonExternalId.ProviderKey;
+            logger.LogInformation("Aniliberty...[{Key}]... Found release {Name}", logKey, release.Name?.English);
+            result.HasMetadata = true;
+            result.QueriedById = id != null;
+            result.Item = release.ToSeason((int)info.IndexNumber);
+            result.Provider = SeasonExternalId.ProviderKey;
         }
         else
         {
-            logger.LogInformation("Aniliberty... No results");
+            logger.LogInformation("Aniliberty...[{Key}]... No matches", logKey);
         }
 
         return result;

@@ -43,7 +43,9 @@ public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory ht
         }
 
         var config = Plugin.Instance.Configuration;
-        var id = item.GetProviderId(SeriesExternalId.ProviderKey);
+        string? id = item is Season
+            ? item.GetProviderId(SeasonExternalId.ProviderKey)
+            : item.GetProviderId(SeriesExternalId.ProviderKey);
         if (string.IsNullOrWhiteSpace(id))
         {
             return Enumerable.Empty<RemoteImageInfo>();
@@ -77,5 +79,5 @@ public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory ht
 
     /// <inheritdoc />
     public bool Supports(BaseItem item)
-        => item is Series || item is Movie;
+        => item is Series || item is Movie || item is Season;
 }
