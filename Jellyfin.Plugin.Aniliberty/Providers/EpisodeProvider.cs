@@ -76,7 +76,7 @@ public class EpisodeProvider(ILogger<EpisodeProvider> logger, IHttpClientFactory
                 return metadataResult;
             }
 
-            logger.LogInformation("Aniliberty...[{Key}]... Load release by id({Id}) for episode({Num})", logKey, id, episodeNumber.Value);
+            logger.LogInformation("Aniliberty...[{Key}]... Load season by id({Id}) for episode({Num})", logKey, seasonId, episodeNumber.Value);
             var release = await api.GetRelease(seasonId, cancellationToken).ConfigureAwait(false);
             if (release is null)
             {
@@ -107,6 +107,7 @@ public class EpisodeProvider(ILogger<EpisodeProvider> logger, IHttpClientFactory
             IndexNumber = episode.Number(),
             IndexNumberEnd = info.IndexNumberEnd,
             Name = episode.Name,
+            OriginalTitle = episode.NameEnglish,
             ProviderIds = new Dictionary<string, string>() { { EpisodeExternalId.ProviderKey, episode.Id.ToString(CultureInfo.InvariantCulture) } }
         };
         metadataResult.Provider = EpisodeExternalId.ProviderKey;

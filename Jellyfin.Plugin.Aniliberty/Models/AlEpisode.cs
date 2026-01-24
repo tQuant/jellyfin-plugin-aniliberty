@@ -8,7 +8,7 @@ namespace Jellyfin.Plugin.Aniliberty.Models;
 public class AlEpisode
 {
     [JsonPropertyName("id")]
-    public int Id { get; set; }
+    public required string Id { get; set; }
 
     [JsonPropertyName("name")]
     public string? Name { get; set; }

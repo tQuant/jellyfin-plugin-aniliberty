@@ -14,8 +14,6 @@ namespace Jellyfin.Plugin.Aniliberty.Providers;
 
 public class AnilibertyApi(IMemoryCache cache, ILogger<AnilibertyApi> logger)
 {
-    private const string BaseApiUrl = "https://aniliberty.top/api/v1";
-
     /// <summary>
     /// Возвращает информацию о релизе по его ID.
     /// </summary>
@@ -45,12 +43,12 @@ public class AnilibertyApi(IMemoryCache cache, ILogger<AnilibertyApi> logger)
 
     private Task<T?> CachedWebRequest<T>(string path, CancellationToken cancellationToken)
     {
-        return cache.GetOrCreateAsync(BaseApiUrl + path, entry =>
+        return cache.GetOrCreateAsync(path, entry =>
         {
             logger.LogInformation("Aniliberty... Entry '{Path}' not found in cache, requesting from server", path);
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
-            return WebRequest<T>(BaseApiUrl + path, cancellationToken);
+            return WebRequest<T>(path, cancellationToken);
         });
     }
 
@@ -62,8 +60,9 @@ public class AnilibertyApi(IMemoryCache cache, ILogger<AnilibertyApi> logger)
         }
 
         var httpClient = Plugin.Instance.GetHttpClient();
+        var baseApiUrl = Plugin.Instance.Configuration.ApiHost + "/api/v1";
 
-        using var response = await httpClient.GetAsync(BaseApiUrl + path, cancellationToken).ConfigureAwait(false);
+        using var response = await httpClient.GetAsync(baseApiUrl + path, cancellationToken).ConfigureAwait(false);
         using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
 
         return await JsonSerializer.DeserializeAsync<T>(responseStream, cancellationToken: cancellationToken).ConfigureAwait(false);

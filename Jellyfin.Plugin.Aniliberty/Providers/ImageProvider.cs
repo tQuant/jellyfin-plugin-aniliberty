@@ -67,10 +67,11 @@ public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory ht
 
         if (string.IsNullOrEmpty(image?.src))
         {
+            logger.LogInformation("Aniliberty... image not found");
             return Enumerable.Empty<RemoteImageInfo>();
         }
 
-        logger.LogInformation("Aniliberty... image found");
+        logger.LogInformation("Aniliberty... image found {Url}", image.src);
         return new[] { new RemoteImageInfo { ProviderName = Name, Url = config.ApiHost + image.src } };
     }
 
