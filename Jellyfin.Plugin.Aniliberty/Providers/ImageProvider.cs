@@ -18,10 +18,8 @@ namespace Jellyfin.Plugin.Aniliberty.Providers;
 /// <summary>
 /// Провайдер изображений.
 /// </summary>
-public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory httpClientFactory) : IRemoteImageProvider, IHasOrder
+public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory httpClientFactory, AnilibertyApi api) : IRemoteImageProvider, IHasOrder
 {
-    private readonly AnilibertyApi _api = new();
-
     /// <inheritdoc />
     public int Order => 0;
 
@@ -43,32 +41,37 @@ public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory ht
         }
 
         var config = Plugin.Instance.Configuration;
-        string? id = item is Season
-            ? item.GetProviderId(SeasonExternalId.ProviderKey)
-            : item.GetProviderId(SeriesExternalId.ProviderKey);
+        string? id = item is Episode
+            ? item.GetProviderId(EpisodeExternalId.ProviderKey)
+            : (item is Season
+                ? item.GetProviderId(SeasonExternalId.ProviderKey)
+                : item.GetProviderId(SeriesExternalId.ProviderKey)
+            );
         if (string.IsNullOrWhiteSpace(id))
         {
             return Enumerable.Empty<RemoteImageInfo>();
         }
 
         logger.LogInformation("Aniliberty... Searching by id({Id}) for image", id);
-        var release = await _api.GetRelease(id, cancellationToken).ConfigureAwait(false);
+        Models.Image? image = null;
+        if (item is Episode)
+        {
+            var episode = await api.GetEpisode(id, cancellationToken).ConfigureAwait(false);
+            image = episode?.Preview;
+        }
+        else
+        {
+            var release = await api.GetRelease(id, cancellationToken).ConfigureAwait(false);
+            image = release?.Poster;
+        }
 
-        if (string.IsNullOrEmpty(release?.Poster?.src))
+        if (string.IsNullOrEmpty(image?.src))
         {
             return Enumerable.Empty<RemoteImageInfo>();
         }
 
         logger.LogInformation("Aniliberty... image found");
-        // the poster url is sometimes higher quality than the poster api
-        return new[]
-        {
-            new RemoteImageInfo
-            {
-                ProviderName = Name,
-                Url = config.ApiHost + release.Poster.src
-            }
-        };
+        return new[] { new RemoteImageInfo { ProviderName = Name, Url = config.ApiHost + image.src } };
     }
 
     /// <inheritdoc />
@@ -79,5 +82,5 @@ public class ImageProvider(ILogger<SeriesProvider> logger, IHttpClientFactory ht
 
     /// <inheritdoc />
     public bool Supports(BaseItem item)
-        => item is Series || item is Movie || item is Season;
+        => item is Series || item is Movie || item is Season || item is Episode;
 }

@@ -5,12 +5,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Aniliberty.Configuration;
 using Jellyfin.Plugin.Aniliberty.Models;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.Aniliberty.Providers;
 
 #pragma warning disable CS1591
 
-public class AnilibertyApi
+public class AnilibertyApi(IMemoryCache cache, ILogger<AnilibertyApi> logger)
 {
     private const string BaseApiUrl = "https://aniliberty.top/api/v1";
 
@@ -20,14 +22,19 @@ public class AnilibertyApi
     /// <param name="id">ID релиза.</param>
     /// <param name="cancellationToken">CancellationToken.</param>
     /// <returns>CatalogRelease.</returns>
-    public async Task<CatalogRelease?> GetRelease(string id, CancellationToken cancellationToken)
+    public async Task<AlRelease?> GetRelease(string id, CancellationToken cancellationToken)
     {
-        return await WebRequest<CatalogRelease>("/anime/releases/" + id, cancellationToken).ConfigureAwait(false);
+        return await CachedWebRequest<AlRelease>("/anime/releases/" + id, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<AlEpisode?> GetEpisode(string id, CancellationToken cancellationToken)
+    {
+        return await CachedWebRequest<AlEpisode>("/anime/releases/episodes/" + id, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<List<CatalogRelease>> SearchReleases(string name, int? year, PluginConfiguration config, CancellationToken cancellationToken)
     {
-        var response = await WebRequest<CatalogList>("/anime/catalog/releases?limit=" + (config.AntiBlock ? 2 : 10) + "&f[search]=" + name + "&f[years][from_year]=" + (year != null ? year : string.Empty), cancellationToken).ConfigureAwait(false);
+        var response = await CachedWebRequest<CatalogList>("/anime/catalog/releases?limit=" + (config.AntiBlock ? 2 : 10) + "&f[search]=" + name + "&f[years][from_year]=" + (year != null ? year : string.Empty), cancellationToken).ConfigureAwait(false);
         if (response == null)
         {
             return new List<CatalogRelease>();
@@ -36,7 +43,18 @@ public class AnilibertyApi
         return response.Data;
     }
 
-    public async Task<T?> WebRequest<T>(string path, CancellationToken cancellationToken)
+    private Task<T?> CachedWebRequest<T>(string path, CancellationToken cancellationToken)
+    {
+        return cache.GetOrCreateAsync(BaseApiUrl + path, entry =>
+        {
+            logger.LogInformation("Aniliberty... Entry '{Path}' not found in cache, requesting from server", path);
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+
+            return WebRequest<T>(BaseApiUrl + path, cancellationToken);
+        });
+    }
+
+    private async Task<T?> WebRequest<T>(string path, CancellationToken cancellationToken)
     {
         if (Plugin.Instance == null)
         {

@@ -18,9 +18,9 @@ namespace Jellyfin.Plugin.Aniliberty.Providers;
 /// </summary>
 /// <param name="logger">ILogger.</param>
 /// <param name="httpClientFactory">IHttpClientFactory.</param>
-public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory httpClientFactory) : IRemoteMetadataProvider<Season, SeasonInfo>, IHasOrder
+/// <param name="api">AnilibertyApi.</param>
+public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory httpClientFactory, AnilibertyApi api) : IRemoteMetadataProvider<Season, SeasonInfo>, IHasOrder
 {
-    private readonly AnilibertyApi _api = new();
     private readonly Resolver _resolver = new();
 
     /// <inheritdoc />
@@ -58,19 +58,19 @@ public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory h
         if (!string.IsNullOrEmpty(id))
         {
             logger.LogInformation("Aniliberty...[{Key}]... Searching season by id({Id})", logKey, id);
-            release = await _api.GetRelease(id, cancellationToken).ConfigureAwait(false);
+            release = await api.GetRelease(id, cancellationToken).ConfigureAwait(false);
         }
         else if (!string.IsNullOrEmpty(parentId))
         {
             logger.LogInformation("Aniliberty...[{Key}]... Search season parent release({Id})", logKey, parentId);
-            var parent = await _api.GetRelease(parentId, cancellationToken).ConfigureAwait(false);
+            var parent = await api.GetRelease(parentId, cancellationToken).ConfigureAwait(false);
             if (parent is null)
             {
                 logger.LogInformation("Aniliberty...[{Key}]... Not found", logKey);
                 return result;
             }
 
-            if (string.IsNullOrEmpty(parent.Name?.English))
+            if (parent.Name is null || string.IsNullOrEmpty(parent.Name?.English))
             {
                 logger.LogInformation("Aniliberty...[{Key}]... parent release has empty orig name", logKey);
                 return result;
@@ -84,7 +84,7 @@ public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory h
             else
             {
                 logger.LogInformation("Aniliberty...[{Key}]... Searching season by name and saeson index({Name}, {Index})", logKey, parent.Name?.English, info.IndexNumber);
-                var releases = await _api.SearchReleases(parent.Name?.English + " " + info.IndexNumber, info.Year, config, cancellationToken).ConfigureAwait(false);
+                var releases = await api.SearchReleases(parent.Name?.English + " " + info.IndexNumber, info.Year, config, cancellationToken).ConfigureAwait(false);
                 if (releases.Count == 0)
                 {
                     logger.LogInformation("Aniliberty...[{Key}]... Not found", logKey);
@@ -102,7 +102,7 @@ public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory h
         {
             logger.LogInformation("Aniliberty...[{Key}]... Found release {Name}", logKey, release.Name?.English);
             result.HasMetadata = true;
-            result.QueriedById = id != null;
+            result.QueriedById = !string.IsNullOrEmpty(id);
             result.Item = release.ToSeason((int)info.IndexNumber);
             result.Provider = SeasonExternalId.ProviderKey;
         }

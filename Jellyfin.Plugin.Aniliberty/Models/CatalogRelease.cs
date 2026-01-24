@@ -51,7 +51,10 @@ public class CatalogRelease
     public string? Description { get; set; }
 
     // public string? notification { get; set; }
-    // public int? episodes_total { get; set; }
+
+    [JsonPropertyName("episodes_total")]
+    public int? EpisodesTotal { get; set; }
+
     // public string? external_player { get; set; }
 
     [JsonPropertyName("is_in_production")]
@@ -109,7 +112,7 @@ public class CatalogRelease
             ProductionYear = Year,
             OfficialRating = AgeRating?.Label,
             Genres = Genres?.Select(genre => genre.Name).ToArray(),
-            RunTimeTicks = AverageDurationOfEpisode.HasValue ? TimeSpan.FromMinutes((double)AverageDurationOfEpisode).Ticks : null,
+            RunTimeTicks = AverageDurationOfEpisode.HasValue && EpisodesTotal.HasValue ? TimeSpan.FromMinutes((double)(AverageDurationOfEpisode * EpisodesTotal)).Ticks : null,
             ProviderIds = new Dictionary<string, string>() { { SeasonExternalId.ProviderKey, Id.ToString(CultureInfo.InvariantCulture) } }
         };
     }

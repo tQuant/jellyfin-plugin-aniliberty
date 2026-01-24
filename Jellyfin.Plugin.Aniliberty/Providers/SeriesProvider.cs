@@ -13,9 +13,8 @@ namespace Jellyfin.Plugin.Aniliberty.Providers;
 
 #pragma warning disable CS1591
 
-public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataProvider<Series, SeriesInfo>, IHasOrder
+public class SeriesProvider(ILogger<SeriesProvider> logger, AnilibertyApi api) : IRemoteMetadataProvider<Series, SeriesInfo>, IHasOrder
 {
-    private readonly AnilibertyApi _api = new();
     private readonly Resolver _resolver = new();
 
     /// <inheritdoc />
@@ -41,12 +40,12 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
         if (!string.IsNullOrEmpty(id))
         {
             logger.LogInformation("Aniliberty...[{Key}]... Searching by id({Id})", logKey, id);
-            release = await _api.GetRelease(id, cancellationToken).ConfigureAwait(false);
+            release = await api.GetRelease(id, cancellationToken).ConfigureAwait(false);
         }
         else
         {
             logger.LogInformation("Aniliberty...[{Key}]... Searching by name({Id}, {Year})", logKey, !string.IsNullOrEmpty(info.OriginalTitle) ? info.OriginalTitle : info.Name, info.Year);
-            var releases = await _api.SearchReleases(info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
+            var releases = await api.SearchReleases(info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
             if (releases.Count > 0)
             {
                 logger.LogInformation("Aniliberty...[{Key}]... Found {X} releases", logKey, releases.Count);
@@ -85,7 +84,7 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
         if (!string.IsNullOrEmpty(aid))
         {
             logger.LogInformation("Aniliberty... Searching by id({Id})", aid);
-            CatalogRelease? release = await _api.GetRelease(aid, cancellationToken).ConfigureAwait(false);
+            CatalogRelease? release = await api.GetRelease(aid, cancellationToken).ConfigureAwait(false);
             if (release is not null)
             {
                 results.Add(release.ToSearchResult(config));
@@ -95,7 +94,7 @@ public class SeriesProvider(ILogger<SeriesProvider> logger) : IRemoteMetadataPro
         if (!string.IsNullOrEmpty(searchInfo.Name))
         {
             logger.LogInformation("Aniliberty... Searching by name({Id}, {Year})", searchInfo.Name, searchInfo.Year);
-            var releases = await _api.SearchReleases(searchInfo.Name, searchInfo.Year, config, cancellationToken).ConfigureAwait(false);
+            var releases = await api.SearchReleases(searchInfo.Name, searchInfo.Year, config, cancellationToken).ConfigureAwait(false);
             foreach (var release in releases)
             {
                 results.Add(release.ToSearchResult(config));
