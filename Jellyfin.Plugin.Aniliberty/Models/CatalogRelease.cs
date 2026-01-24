@@ -106,8 +106,6 @@ public class CatalogRelease
         return new Season
         {
             IndexNumber = indexNumber,
-            Name = Name?.Main,
-            OriginalTitle = Name?.English,
             Overview = Description,
             ProductionYear = Year,
             OfficialRating = AgeRating?.Label,

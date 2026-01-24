@@ -45,7 +45,7 @@ public class SeriesProvider(ILogger<SeriesProvider> logger, AnilibertyApi api) :
         else
         {
             logger.LogInformation("Aniliberty...[{Key}]... Searching by name({Id}, {Year})", logKey, !string.IsNullOrEmpty(info.OriginalTitle) ? info.OriginalTitle : info.Name, info.Year);
-            var releases = await api.SearchReleases(info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
+            var releases = await api.SearchReleases(!string.IsNullOrEmpty(info.OriginalTitle) ? info.OriginalTitle : info.Name, info.Year, config, cancellationToken).ConfigureAwait(false);
             if (releases.Count > 0)
             {
                 logger.LogInformation("Aniliberty...[{Key}]... Found {X} releases", logKey, releases.Count);
