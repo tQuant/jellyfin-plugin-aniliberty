@@ -39,7 +39,7 @@ public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory h
 
         var result = new MetadataResult<Season>();
 
-        if (info.IndexNumber == null)
+        if (info.IndexNumber == null || info.IndexNumber < 1)
         {
             return result;
         }
@@ -84,7 +84,7 @@ public class SeasonProvider(ILogger<SeriesProvider> logger, IHttpClientFactory h
             else
             {
                 logger.LogInformation("Aniliberty...[{Key}]... Searching season by name and saeson index({Name}, {Index})", logKey, parent.Name?.English, info.IndexNumber);
-                var releases = await api.SearchReleases(parent.Name?.English + " " + info.IndexNumber, info.Year, config, cancellationToken).ConfigureAwait(false);
+                var releases = await api.SearchReleases(parent.Name?.English + " " + info.IndexNumber, null, config, cancellationToken).ConfigureAwait(false);
                 if (releases.Count == 0)
                 {
                     logger.LogInformation("Aniliberty...[{Key}]... Not found", logKey);

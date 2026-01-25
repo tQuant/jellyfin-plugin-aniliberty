@@ -77,6 +77,15 @@ public class CatalogRelease
     public List<Genre>? Genres { get; init; }
 
     /// <summary>
+    /// Возвращает дилтельность фильма (если это фильм) или суммарную длительность эпизодов в сезоне (если это сериал).
+    /// </summary>
+    /// <returns>Длительность в секундах.</returns>
+    protected virtual int? GetTotalDuration()
+    {
+        return AverageDurationOfEpisode.HasValue && EpisodesTotal.HasValue ? (int)MathF.Round((float)(AverageDurationOfEpisode * EpisodesTotal * 60)) : null;
+    }
+
+    /// <summary>
     /// Преобразует релиз в Series.
     /// </summary>
     /// <returns>Series.</returns>
@@ -103,6 +112,7 @@ public class CatalogRelease
     /// <returns>Series.</returns>
     public Season ToSeason(int indexNumber)
     {
+        int? duration = GetTotalDuration();
         return new Season
         {
             IndexNumber = indexNumber,
@@ -110,7 +120,7 @@ public class CatalogRelease
             ProductionYear = Year,
             OfficialRating = AgeRating?.Label,
             Genres = Genres?.Select(genre => genre.Name).ToArray(),
-            RunTimeTicks = AverageDurationOfEpisode.HasValue && EpisodesTotal.HasValue ? TimeSpan.FromMinutes((double)(AverageDurationOfEpisode * EpisodesTotal)).Ticks : null,
+            RunTimeTicks = duration is not null ? TimeSpan.FromSeconds((long)duration).Ticks : null,
             ProviderIds = new Dictionary<string, string>() { { SeasonExternalId.ProviderKey, Id.ToString(CultureInfo.InvariantCulture) } }
         };
     }

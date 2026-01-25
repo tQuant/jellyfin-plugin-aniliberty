@@ -59,7 +59,8 @@ public class Resolver
     /// <returns>Подходящий релиз.</returns>
     public CatalogRelease? FilterSeason(List<CatalogRelease> catalogReleases, string originalTitle, int seasonNumber, ILogger logger)
     {
-        var pattern = Regex.Escape(originalTitle) + "\\s+(Season\\s+)?" + seasonNumber + "(\\w{1,2})?(\\s+Season)?";
+        var pattern = Regex.Replace(Regex.Escape(originalTitle), "(?:\\\\ )*(:|-|\\.)(?:\\\\ )*", "\\s*$1\\s*")
+                      + "\\s+(Season\\s+)?" + seasonNumber + "(\\w{1,2})?(\\s+Season)?";
         logger.LogInformation("Aniliberty... Compare with pattern: {Pattern}", pattern);
 
         // Сравниваем релизы по оригинальному названию
