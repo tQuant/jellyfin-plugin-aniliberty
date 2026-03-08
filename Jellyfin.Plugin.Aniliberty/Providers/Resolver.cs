@@ -22,27 +22,40 @@ public class Resolver
     /// <returns>Подходящий релиз.</returns>
     public CatalogRelease? FilterSeries(List<CatalogRelease> catalogReleases, string? originalTitle, string? name)
     {
+        originalTitle = originalTitle != null ? RemoveSpecialCharacters(originalTitle) : null;
+        name = name != null ? RemoveSpecialCharacters(name) : null;
+
         // Сначала ищем релиз по оригинальному названию (release.Name?.English)
         foreach (var release in catalogReleases)
         {
-            if (!string.IsNullOrEmpty(release.Name?.English) && (
-                    string.Equals(release.Name?.English, originalTitle, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(release.Name?.English, name, StringComparison.OrdinalIgnoreCase)
-                ))
+            if (!string.IsNullOrEmpty(release.Name?.English))
             {
-                return release;
+                var releaseName = RemoveSpecialCharacters(release.Name.English);
+                // logger.LogInformation("Aniliberty... Filter by name({OriginalTitle} or {Name} = {ReleaseName})", originalTitle, name, releaseName);
+                if (
+                    string.Equals(releaseName, originalTitle, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(releaseName, name, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    return release;
+                }
             }
         }
 
         // Если таких нет, то смотрим русское название (release.Name?.Main)
         foreach (var release in catalogReleases)
         {
-            if (!string.IsNullOrEmpty(release.Name?.Main) && (
-                    string.Equals(release.Name?.Main, originalTitle, StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(release.Name?.Main, name, StringComparison.OrdinalIgnoreCase)
-                ))
+            if (!string.IsNullOrEmpty(release.Name?.Main))
             {
-                return release;
+                var releaseName = RemoveSpecialCharacters(release.Name.Main);
+                // logger.LogInformation("Aniliberty... Filter by name({OriginalTitle} or {Name} = {ReleaseName})", originalTitle, name, releaseName);
+                if (
+                    string.Equals(releaseName, originalTitle, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(releaseName, name, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    return release;
+                }
             }
         }
 
@@ -73,5 +86,10 @@ public class Resolver
         }
 
         return null;
+    }
+
+    private string RemoveSpecialCharacters(string name)
+    {
+        return Regex.Replace(Regex.Replace(name, "(?:\\\\ )*(:|-|\\.)(?:\\\\ )*", " "), "\\s{2,}", " ");
     }
 }
