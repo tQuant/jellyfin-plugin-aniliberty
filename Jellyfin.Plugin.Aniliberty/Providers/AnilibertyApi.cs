@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +64,11 @@ public class AnilibertyApi(IMemoryCache cache, ILogger<AnilibertyApi> logger)
         var baseApiUrl = Plugin.Instance.Configuration.ApiHost + "/api/v1";
 
         using var response = await httpClient.GetAsync(baseApiUrl + path, cancellationToken).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode)
+        {
+            return default(T);
+        }
+
         using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
 
         return await JsonSerializer.DeserializeAsync<T>(responseStream, cancellationToken: cancellationToken).ConfigureAwait(false);
